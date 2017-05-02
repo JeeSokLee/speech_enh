@@ -13,7 +13,8 @@ nshi = 128;
 floor = 0.0001;
 snrdb = 10;
 
-for iFile=1:2
+numFiles = length(wavFiles);
+for iFile=1:numFiles
   iFileName = [pwd, wavPath, ...
                 '/' wavFiles(iFile).name(1 : end - 4)];
   clean = audioread([iFileName '.wav']); 
