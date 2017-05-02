@@ -1,9 +1,10 @@
-# speech_enhancement
+% # speech_enhancement  <- # is not a matlab expression
 clear;clc;close all
 
 %% settings
-wavPath  = '/timit_test_192';
-wavFiles = dir([pwd wavPath '/*.wav']);
+wavPath  = 'timit_test_192';                % <- try to use filesep
+wavFiles = dir([pwd filesep wavPath filesep '*.wav']);
+% filesep is independent to operating system
 numFiles = 1;
 NumBits = 16;
 fs=16000;
@@ -13,131 +14,135 @@ nshi = 128;
 floor = 0.0001;
 snrdb = 10;
 
-numFiles = length(wavFiles);
+% numFiles = length(wavFiles);
+numFiles = 1;
 for iFile=1:numFiles
-  iFileName = [pwd, wavPath, ...
-                '/' wavFiles(iFile).name(1 : end - 4)];
-  clean = audioread([iFileName '.wav']); 
-dur = length(clean);
+  fprintf('  %5d / %5d\n', iFile, numFiles);  % display progress
+  iFileName = [pwd filesep wavPath filesep wavFiles(iFile).name(1 : end - 4)];
+  % again, filesep
+  clean = audioread([iFileName '.wav']);
+  
+  % there was a tapping problem from here
+  dur = length(clean);
 
-%% gen-noise
-noise1 = wavread('white.wav');
-noise2 = wavread('babble.wav');
-noise3 = wavread('pink.wav');
-snr= 10.^(snrdb/20);
+  %% gen-noise
+  noise1 = audioread('white.wav');
+  noise2 = audioread('babble.wav');
+  noise3 = audioread('pink.wav');
+  snr= 10.^(snrdb/20);
 
-[input1,noise1] = gen_noisy(clean,noise1,snrdb);
-[input2,noise2] = gen_noisy(clean,noise2,snrdb);
-[input3,noise3] = gen_noisy(clean,noise3,snrdb);
+  [input1,noise1] = gen_noisy(clean,noise1,snrdb);
+  [input2,noise2] = gen_noisy(clean,noise2,snrdb);
+  [input3,noise3] = gen_noisy(clean,noise3,snrdb);
 
-%% test
-S = stft(clean,nfrm,nfrm,nshi,@hann);
-X1 = stft(input1,nfrm,nfrm,nshi,@hann);
-ipsd1 = abs(X1) .^ 2;
-npsd1 = imcra(ipsd1);
+  %% test
+  S = stft(clean,nfrm,nfrm,nshi,@hann);
+  X1 = stft(input1,nfrm,nfrm,nshi,@hann);
+  ipsd1 = abs(X1) .^ 2;
+  npsd1 = imcra(ipsd1);
 
-X2 = stft(input2,nfrm,nfrm,nshi,@hann);
-ipsd2 = abs(X2) .^ 2;
-npsd2 = imcra(ipsd2);
+  X2 = stft(input2,nfrm,nfrm,nshi,@hann);
+  ipsd2 = abs(X2) .^ 2;
+  npsd2 = imcra(ipsd2);
 
-X3 = stft(input3,nfrm,nfrm,nshi,@hann);
-ipsd3 = abs(X3) .^ 2;
-npsd3 = imcra(ipsd3);
+  X3 = stft(input3,nfrm,nfrm,nshi,@hann);
+  ipsd3 = abs(X3) .^ 2;
+  npsd3 = imcra(ipsd3);
 
-%%
-snr_input=SNR(input1,clean);
- 
-%spectral subtraction
-G_ss1 = specsubt(ipsd1,npsd1,floor);
-S_ss1 = G_ss1 .* S;
-s_ss1 = istft(S_ss1,nfft,nfrm,nshi,@hann);
-Y_ss1 = G_ss1 .* X1;
-y_ss1 = istft(Y_ss1,nfft,nfrm,nshi,@hann);
+  %%
+  snr_input=SNR(input1,clean);
 
-G_ss2 = specsubt(ipsd2,npsd2,floor);
-S_ss2 = G_ss2 .* S;
-s_ss2 = istft(S_ss2,nfft,nfrm,nshi,@hann);
-Y_ss2 = G_ss2 .* X2;
-y_ss2 = istft(Y_ss2,nfft,nfrm,nshi,@hann);
+  %spectral subtraction
+  G_ss1 = specsubt(ipsd1,npsd1,floor);
+  S_ss1 = G_ss1 .* S;
+  s_ss1 = istft(S_ss1,nfrm,nfrm,nshi,@hann);
+  Y_ss1 = G_ss1 .* X1;
+  y_ss1 = istft(Y_ss1,nfrm,nfrm,nshi,@hann);
 
-G_ss3 = specsubt(ipsd3,npsd3,floor);
-S_ss3 = G_ss3 .* S;
-s_ss3 = istft(S_ss3,nfft,nfrm,nshi,@hann);
-Y_ss3 = G_ss3 .* X3;
-y_ss3 = istft(Y_ss3,nfft,nfrm,nshi,@hann);
+  G_ss2 = specsubt(ipsd2,npsd2,floor);
+  S_ss2 = G_ss2 .* S;
+  s_ss2 = istft(S_ss2,nfrm,nfrm,nshi,@hann);
+  Y_ss2 = G_ss2 .* X2;
+  y_ss2 = istft(Y_ss2,nfrm,nfrm,nshi,@hann);
 
-%weiner filter
-G_wf1 = wf_enh(ipsd1,npsd1,floor);
-S_wf1 = G_wf1 .* S;
-s_wf1 = istft(S_wf1,nfft,nfrm,nshi,@hann);
-Y_wf1 = G_wf1 .* X1;
-y_wf1 = istft(Y_wf1,nfft,nfrm,nshi,@hann);
+  G_ss3 = specsubt(ipsd3,npsd3,floor);
+  S_ss3 = G_ss3 .* S;
+  s_ss3 = istft(S_ss3,nfrm,nfrm,nshi,@hann);
+  Y_ss3 = G_ss3 .* X3;
+  y_ss3 = istft(Y_ss3,nfrm,nfrm,nshi,@hann);
 
-G_wf2 = wf_enh(ipsd2,npsd2,floor);
-S_wf2 = G_wf2 .* S;
-s_wf2 = istft(S_wf2,nfft,nfrm,nshi,@hann);
-Y_wf2 = G_wf2 .* X2;
-y_wf2 = istft(Y_wf2,nfft,nfrm,nshi,@hann);
+  %weiner filter
+  G_wf1 = wf_enh(ipsd1,npsd1,floor);
+  S_wf1 = G_wf1 .* S;
+  s_wf1 = istft(S_wf1,nfrm,nfrm,nshi,@hann);
+  Y_wf1 = G_wf1 .* X1;
+  y_wf1 = istft(Y_wf1,nfrm,nfrm,nshi,@hann);
 
-G_wf3 = wf_enh(ipsd3,npsd3,floor);
-S_wf3 = G_wf3 .* S;
-s_wf3 = istft(S_wf3,nfft,nfrm,nshi,@hann);
-Y_wf3 = G_wf3 .* X3;
-y_wf3 = istft(Y_wf3,nfft,nfrm,nshi,@hann);
+  G_wf2 = wf_enh(ipsd2,npsd2,floor);
+  S_wf2 = G_wf2 .* S;
+  s_wf2 = istft(S_wf2,nfrm,nfrm,nshi,@hann);
+  Y_wf2 = G_wf2 .* X2;
+  y_wf2 = istft(Y_wf2,nfrm,nfrm,nshi,@hann);
 
-%maximum likelihood
-G_ml1 = mlee(ipsd1,npsd1,floor,snr,0,0.8);
-S_ml1 = G_ml1 .* S;
-s_ml1 = istft(S_ml1,nfft,nfrm,nshi,@hann);
-Y_ml1 = G_ml1 .* X1;
-y_ml1 = istft(Y_ml1,nfft,nfrm,nshi,@hann);
+  G_wf3 = wf_enh(ipsd3,npsd3,floor);
+  S_wf3 = G_wf3 .* S;
+  s_wf3 = istft(S_wf3,nfrm,nfrm,nshi,@hann);
+  Y_wf3 = G_wf3 .* X3;
+  y_wf3 = istft(Y_wf3,nfrm,nfrm,nshi,@hann);
 
-G_ml2 = mlee(ipsd2,npsd2,floor,snr,0,0.8);
-S_ml2 = G_ml2 .* S;
-s_ml2 = istft(S_ml2,nfft,nfrm,nshi,@hann);
-Y_ml2 = G_ml2 .* X2;
-y_ml2 = istft(Y_ml2,nfft,nfrm,nshi,@hann);
+  %maximum likelihood
+  G_ml1 = mlee(ipsd1,npsd1,floor,snr,0,0.8);
+  S_ml1 = G_ml1 .* S;
+  s_ml1 = istft(S_ml1,nfrm,nfrm,nshi,@hann);
+  Y_ml1 = G_ml1 .* X1;
+  y_ml1 = istft(Y_ml1,nfrm,nfrm,nshi,@hann);
 
-G_ml3 = mlee(ipsd3,npsd3,floor,snr,0,0.8);
-S_ml3 = G_ml3 .* S;
-s_ml3 = istft(S_ml3,nfft,nfrm,nshi,@hann);
-Y_ml3 = G_ml3 .* X3;
-y_ml3 = istft(Y_ml3,nfft,nfrm,nshi,@hann);
+  G_ml2 = mlee(ipsd2,npsd2,floor,snr,0,0.8);
+  S_ml2 = G_ml2 .* S;
+  s_ml2 = istft(S_ml2,nfrm,nfrm,nshi,@hann);
+  Y_ml2 = G_ml2 .* X2;
+  y_ml2 = istft(Y_ml2,nfrm,nfrm,nshi,@hann);
 
-%imcra
-G_omlsa1 = omlsa(ipsd1,npsd1,floor,0.92);
-S_omlsa1 = G_omlsa1 .* S;
-s_omlsa1 = istft(S_omlsa1,nfrm,nfrm,nshi,@hann);
-Y_omlsa1 = G_omlsa1 .* X1;
-y_omlsa1 = istft(Y_omlsa1,nfrm,nfrm,nshi,@hann);  
+  G_ml3 = mlee(ipsd3,npsd3,floor,snr,0,0.8);
+  S_ml3 = G_ml3 .* S;
+  s_ml3 = istft(S_ml3,nfrm,nfrm,nshi,@hann);
+  Y_ml3 = G_ml3 .* X3;
+  y_ml3 = istft(Y_ml3,nfrm,nfrm,nshi,@hann);
 
-G_omlsa2 = omlsa(ipsd2,npsd2,floor,0.92);
-S_omlsa2 = G_omlsa2 .* S;
-s_omlsa2 = istft(S_omlsa2,nfrm,nfrm,nshi,@hann);
-Y_omlsa2 = G_omlsa2 .* X2;
-y_omlsa2 = istft(Y_omlsa2,nfrm,nfrm,nshi,@hann); 
+  %imcra
+  G_omlsa1 = omlsa(ipsd1,npsd1,floor,0.92);
+  S_omlsa1 = G_omlsa1 .* S;
+  s_omlsa1 = istft(S_omlsa1,nfrm,nfrm,nshi,@hann);
+  Y_omlsa1 = G_omlsa1 .* X1;
+  y_omlsa1 = istft(Y_omlsa1,nfrm,nfrm,nshi,@hann);  
 
-G_omlsa3 = omlsa(ipsd3,npsd3,floor,0.92);
-S_omlsa3 = G_omlsa3 .* S;
-s_omlsa3 = istft(S_omlsa3,nfrm,nfrm,nshi,@hann);
-Y_omlsa3 = G_omlsa3 .* X1;
-y_omlsa3 = istft(Y_omlsa3,nfrm,nfrm,nshi,@hann); 
+  G_omlsa2 = omlsa(ipsd2,npsd2,floor,0.92);
+  S_omlsa2 = G_omlsa2 .* S;
+  s_omlsa2 = istft(S_omlsa2,nfrm,nfrm,nshi,@hann);
+  Y_omlsa2 = G_omlsa2 .* X2;
+  y_omlsa2 = istft(Y_omlsa2,nfrm,nfrm,nshi,@hann); 
 
-%% SNR
-snr_ss1(1,iFile) = SNR(y_ss1,s_ss1);
-snr_wf1(1,iFile) = SNR(y_wf1,s_wf1);
-snr_ml1(1,iFile) = SNR(y_ml1,s_ml1);
-snr_imcra1(1,iFile) = SNR(y_omlsa1,s_omlsa1);
+  G_omlsa3 = omlsa(ipsd3,npsd3,floor,0.92);
+  S_omlsa3 = G_omlsa3 .* S;
+  s_omlsa3 = istft(S_omlsa3,nfrm,nfrm,nshi,@hann);
+  Y_omlsa3 = G_omlsa3 .* X3; % X1 -> X3
+  y_omlsa3 = istft(Y_omlsa3,nfrm,nfrm,nshi,@hann); 
 
-snr_ss2(1,iFile) = SNR(y_ss2,s_ss2);
-snr_wf2(1,iFile) = SNR(y_wf2,s_wf2);
-snr_ml2(1,iFile) = SNR(y_ml2,s_ml2);
-snr_imcra2(1,iFile) = SNR(y_omlsa2,s_omlsa2);
+  %% SNR
+  snr_ss1(1,iFile) = SNR(y_ss1,s_ss1);
+  snr_wf1(1,iFile) = SNR(y_wf1,s_wf1);
+  snr_ml1(1,iFile) = SNR(y_ml1,s_ml1);
+  snr_imcra1(1,iFile) = SNR(y_omlsa1,s_omlsa1);
 
-snr_ss3(1,iFile) = SNR(y_ss3,s_ss3);
-snr_wf3(1,iFile) = SNR(y_wf3,s_wf3);
-snr_ml3(1,iFile) = SNR(y_ml3,s_ml3);
-snr_imcra3(1,iFile) = SNR(y_omlsa3,s_omlsa3);
+  snr_ss2(1,iFile) = SNR(y_ss2,s_ss2);
+  snr_wf2(1,iFile) = SNR(y_wf2,s_wf2);
+  snr_ml2(1,iFile) = SNR(y_ml2,s_ml2);
+  snr_imcra2(1,iFile) = SNR(y_omlsa2,s_omlsa2);
+
+  snr_ss3(1,iFile) = SNR(y_ss3,s_ss3);
+  snr_wf3(1,iFile) = SNR(y_wf3,s_wf3);
+  snr_ml3(1,iFile) = SNR(y_ml3,s_ml3);
+  snr_imcra3(1,iFile) = SNR(y_omlsa3,s_omlsa3);
 
 end
 
